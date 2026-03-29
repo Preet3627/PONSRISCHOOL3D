@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prathmik Vidhyamandir Ponsri — School Hall 3D</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#1a1a2e; font-family:'Segoe UI',sans-serif; overflow:hidden; }
+canvas { display:block; width:100vw; height:100vh; }
+
+#ui {
+  position:fixed; top:12px; left:12px; z-index:10;
+  background:rgba(10,10,20,0.88); border:1px solid rgba(255,255,255,0.12);
+  border-radius:14px; padding:14px 16px; min-width:200px;
+  backdrop-filter:blur(12px);
+}
+#ui h2 { color:#fff; font-size:13px; font-weight:600; margin-bottom:2px; }
+#ui p  { color:#7a8099; font-size:10px; margin-bottom:10px; }
+
+.lbtn {
+  display:flex; align-items:center; gap:8px;
+  background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+  border-radius:8px; padding:6px 10px; margin-bottom:5px;
+  cursor:pointer; color:#c0c8d8; font-size:11px; width:100%; transition:all .18s;
+}
+.lbtn:hover { background:rgba(255,255,255,0.09); }
+.lbtn.on { border-color:rgba(120,180,255,0.45); background:rgba(120,180,255,0.1); color:#90c0ff; }
+.dot { width:9px; height:9px; border-radius:2px; flex-shrink:0; }
+
+#ctrl {
+  position:fixed; bottom:14px; left:50%; transform:translateX(-50%);
+  display:flex; gap:6px; z-index:10; flex-wrap:wrap; justify-content:center;
+}
+.cb {
+  background:rgba(10,10,20,0.88); border:1px solid rgba(255,255,255,0.1);
+  color:#c0c8d8; border-radius:8px; padding:7px 13px; font-size:11px;
+  cursor:pointer; backdrop-filter:blur(10px); transition:all .18s;
+}
+.cb:hover { background:rgba(120,180,255,0.15); color:#90c0ff; border-color:rgba(120,180,255,0.4); }
+
+#loading {
+  position:fixed; inset:0; background:#0d0d1a;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  z-index:200; transition:opacity .6s;
+}
+#loading h1 { color:#fff; font-size:22px; margin-bottom:6px; font-weight:300; letter-spacing:2px; }
+#loading p  { color:#6a7090; font-size:12px; letter-spacing:1px; }
+.bar { width:220px; height:3px; background:rgba(255,255,255,0.08); border-radius:2px; margin-top:18px; overflow:hidden; }
+.bfill { height:100%; background:linear-gradient(90deg,#4d9fff,#7f5fff); border-radius:2px; animation:ld 1.4s ease forwards; }
+@keyframes ld { from{width:0} to{width:100%} }
+
+#hint {
+  position:fixed; top:12px; right:12px; z-index:10;
+  background:rgba(10,10,20,0.85); border:1px solid rgba(255,255,255,0.1);
+  border-radius:12px; padding:11px 14px; backdrop-filter:blur(10px);
+  color:#7a8099; font-size:10px; line-height:1.9;
+}
+#hint b { color:#b0bac8; }
+.logo-spin {
+  width:80px; height:80px; margin-bottom:20px;
+  animation:spin 3s linear infinite;
+}
+@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+</style>
+</head>
+<body>
+<div id="loading">
+  <img src="LOGO.png" class="logo-spin" alt="LOGO">
+  <h1>PRATHMIK VIDHYAMANDIR</h1>
+  <p>PONSRI · SCHOOL HALL · 3D MODEL</p>
+  <div class="bar"><div class="bfill"></div></div>
+</div>
+
+<canvas id="c"></canvas>
+
+<div id="ui">
+  <h2>Prathmik Vidhyamandir</h2>
+  <p>Ponsri School Hall</p>
+  <div class="lbtn on" onclick="tog('walls')"   id="b-walls">  <div class="dot" style="background:#c8855a"></div>Walls</div>
+  <div class="lbtn on" onclick="tog('columns')" id="b-columns"><div class="dot" style="background:#cc9966"></div>Columns</div>
+  <div class="lbtn on" onclick="tog('stage')"   id="b-stage">  <div class="dot" style="background:#d4a843"></div>Stage (Left)</div>
+  <div class="lbtn on" onclick="tog('floors')"  id="b-floors"> <div class="dot" style="background:#7a9a6a"></div>Floors & Ground</div>
+  <div class="lbtn on" onclick="tog('roof')"    id="b-roof">   <div class="dot" style="background:#6a8aaa"></div>Roof / FF Slab</div>
+  <div class="lbtn on" onclick="tog('openings')" id="b-openings"><div class="dot" style="background:#5ab4d4"></div>Windows & Doors</div>
+  <div class="lbtn on" onclick="tog('stairs')"  id="b-stairs"> <div class="dot" style="background:#d46a6a"></div>Stairs & Ramp</div>
+  <div class="lbtn on" onclick="tog('trees')"   id="b-trees">  <div class="dot" style="background:#4a9a5a"></div>Trees</div>
+  <div class="lbtn on" onclick="tog('beams')"   id="b-beams">  <div class="dot" style="background:#9a7ad4"></div>Beams & Structure</div>
+</div>
+
+  <button class="cb" onclick="sv('front')">Front</button>
+  <button class="cb" onclick="sv('back')">Back</button>
+  <button class="cb" onclick="sv('top')">Top</button>
+  <button class="cb" onclick="sv('inside-hall')">Hall Interior</button>
+  <button class="cb" onclick="sv('second-floor')">Second Floor</button>
+  <button class="cb" onclick="sv('stage-view')">Stage View</button>
+  <button class="cb" onclick="sv('up-view')">View Up</button>
+  <button class="cb" onclick="sv('side')">Side</button>
+  <button class="cb" onclick="sv('iso')">Isometric</button>
+  <button class="cb" onclick="twf()">Wireframe</button>
+  <button class="cb" onclick="rv()">Reset View</button>
+  <div style="width:100%; height:8px;"></div>
+  <button class="cb" onclick="setTime('morning')">Morning</button>
+  <button class="cb" onclick="setTime('noon')">Noon</button>
+  <button class="cb" onclick="setTime('evening')">Evening</button>
+  <button class="cb" onclick="setTime('night')">Night</button>
+</div>
+
+<div id="hint">
+  <b>Controls</b><br>
+  Left drag — Rotate<br>
+  Right drag — Pan<br>
+  Scroll — Zoom<br><br>
+  <b>Building</b><br>
+  Mix: M-20<br>
+  7 bays · 2 floors<br>
+  Stage: Left side GF
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ─── RENDERER ───────────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const R = new THREE.WebGLRenderer({canvas, antialias:true});
+R.setPixelRatio(Math.min(devicePixelRatio,2));
+R.setSize(innerWidth, innerHeight);
+R.shadowMap.enabled = true;
+R.shadowMap.type = THREE.PCFSoftShadowMap;
+R.setClearColor(0x87CEEB); // sky blue
+
+const S = new THREE.Scene();
+S.fog = new THREE.FogExp2(0xc8dff0, 0.008);
+
+const CAM = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.1, 600);
+
+// ─── LIGHTS ─────────────────────────────────────────────────────────────────
+S.add(new THREE.AmbientLight(0xffeedd, 0.75));
+const sun = new THREE.DirectionalLight(0xfff5e0, 1.3);
+sun.position.set(40, 60, 30);
+sun.castShadow = true;
+sun.shadow.mapSize.set(4096,4096);
+sun.shadow.camera.left = -80; sun.shadow.camera.right = 80;
+sun.shadow.camera.top  =  80; sun.shadow.camera.bottom= -80;
+sun.shadow.camera.far  = 200;
+S.add(sun);
+const fillLight=new THREE.DirectionalLight(0x9ab8d8,0.4);
+fillLight.position.set(-30,20,-20);
+S.add(fillLight);
+S.add(new THREE.HemisphereLight(0x87CEEB,0x8B7355,0.5));
+
+// ─── CANVAS TEXTURE HELPERS ─────────────────────────────────────────────────
+function brickTex(w=256,h=256){
+  const c=document.createElement('canvas'); c.width=w; c.height=h;
+  const x=c.getContext('2d');
+  x.fillStyle='#b06040'; x.fillRect(0,0,w,h);
+  const bw=32,bh=16;
+  for(let row=0;row<h/bh+1;row++){
+    const off=row%2===0?0:bw/2;
+    for(let col=-1;col<w/bw+1;col++){
+      const bx=col*bw+off, by=row*bh;
+      const r=Math.floor(Math.random()*30);
+      x.fillStyle=`rgb(${160+r},${80+r/2},${50+r/3})`;
+      x.fillRect(bx+1,by+1,bw-2,bh-2);
+      x.fillStyle='rgba(0,0,0,0.06)';
+      x.fillRect(bx+1,by+1,bw-2,bh-2);
+    }
+  }
+  x.strokeStyle='rgba(255,255,255,0.08)';
+  for(let i=0;i<8;i++){
+    x.beginPath(); x.moveTo(Math.random()*w,0); x.lineTo(Math.random()*w,h); x.stroke();
+  }
+  const t=new THREE.CanvasTexture(c);
+  t.wrapS=t.wrapT=THREE.RepeatWrapping;
+  return t;
+}
+
+function concreteTex(){
+  const c=document.createElement('canvas'); c.width=128; c.height=128;
+  const x=c.getContext('2d');
+  x.fillStyle='#c8b89a'; x.fillRect(0,0,128,128);
+  for(let i=0;i<300;i++){
+    const g=Math.floor(Math.random()*40-20);
+    x.fillStyle=`rgba(${128+g},${110+g},${90+g},0.4)`;
+    x.fillRect(Math.random()*128,Math.random()*128,2,2);
+  }
+  const t=new THREE.CanvasTexture(c);
+  t.wrapS=t.wrapT=THREE.RepeatWrapping;
+  return t;
+}
+
+function floorTex(){
+  const c=document.createElement('canvas'); c.width=256; c.height=256;
+  const x=c.getContext('2d');
+  x.fillStyle='#d4c4a8'; x.fillRect(0,0,256,256);
+  // interlocking paver pattern like image
+  for(let r=0;r<16;r++){
+    for(let col=0;col<16;col++){
+      const shade=Math.floor(Math.random()*20-10);
+      x.fillStyle=`rgb(${200+shade},${185+shade},${160+shade})`;
+      const px=col*16, py=r*16;
+      if((r+col)%2===0){
+        x.fillRect(px+1,py+1,14,14);
+      } else {
+        x.fillRect(px+1,py+1,6,14);
+        x.fillRect(px+9,py+1,6,14);
+      }
+    }
+  }
+  const t=new THREE.CanvasTexture(c);
+  t.wrapS=t.wrapT=THREE.RepeatWrapping;
+  return t;
+}
+
+function grassTex(){
+  const c=document.createElement('canvas'); c.width=256; c.height=256;
+  const x=c.getContext('2d');
+  x.fillStyle='#5a8a5a'; x.fillRect(0,0,256,256);
+  for(let i=0;i<600;i++){
+    const shade=Math.floor(Math.random()*40-20);
+    x.fillStyle=`rgb(${80+shade},${120+shade},${60})`;
+    x.fillRect(Math.random()*256,Math.random()*256,2,4);
+  }
+  const t=new THREE.CanvasTexture(c);
+  t.wrapS=t.wrapT=THREE.RepeatWrapping;
+  return t;
+}
+
+const TEX = {
+  brick: brickTex(),
+  concrete: concreteTex(),
+  floor: floorTex(),
+  grass: grassTex(),
+};
+
+// ─── MATERIALS ───────────────────────────────────────────────────────────────
+function M(color,opts={}){
+  return new THREE.MeshLambertMaterial({color,...opts});
+}
+function MT(tex,color,repeat=[1,1],opts={}){
+  const t=tex.clone();
+  t.wrapS=t.wrapT=THREE.RepeatWrapping;
+  t.repeat.set(...repeat);
+  t.needsUpdate=true;
+  return new THREE.MeshLambertMaterial({map:t,color,...opts});
+}
+
+const MAT = {
+  brick:    MT(TEX.brick,  0xffffff, [4,2]),
+  brickCol: MT(TEX.brick,  0xddaa88, [4,2]),
+  concrete: MT(TEX.concrete,0xddccaa,[2,2]),
+  floor:    MT(TEX.floor,  0xffffff, [8,6]),
+  ground:   MT(TEX.grass,  0xffffff, [20,20]),
+  paver:    MT(TEX.floor,  0xddccaa, [6,6]),
+  roof:     M(0x8899aa,{transparent:true,opacity:0.82}),
+  roofInner:M(0xbbcccc),
+  beam:     M(0x9999aa),
+  stage:    MT(TEX.concrete,0xcc9966,[3,1]),
+  stageTop: M(0x997755),
+  glass:    M(0x88ccff,{transparent:true,opacity:0.45}),
+  doorFrame:M(0x6b4c2a),
+  door:     M(0x8b5e34),
+  column:   MT(brickTex(),0xcc9966,[2,3]),
+  sky:      M(0x87CEEB,{side:THREE.BackSide}),
+  sand:     M(0xd4c4a8),
+  rebar:    M(0x555555),
+  treeTrunk:M(0x6a4a25),
+  treeCrown:M(0x3d8a3a,{transparent:true,opacity:0.95}),
+  stairMat: MT(TEX.concrete,0xccbbaa,[2,1]),
+  pvc:      M(0xeeeeee),
+  acUnit:   M(0xcccccc),
+  acGrill:  M(0x333333),
+  rampMat:  MT(TEX.concrete,0xc8b89a,[2,1]),
+  window:   M(0x5aa0d0,{transparent:true,opacity:0.5}),
+  winFrame: M(0x4a7a90),
+  wallTop:  M(0xc09870),
+  plinth:   M(0x7a6a5a),
+  innerFloor:MT(TEX.floor,0xf5f5f0,[10,6]),
+  courtyard:MT(TEX.floor,0xd4c4a8,[15,12]),
+  lawn:     MT(TEX.grass, 0xffffff, [25,25]),
+};
+
+// ─── SCENE GROUPS ────────────────────────────────────────────────────────────
+const GRP = {
+  walls:    new THREE.Group(),
+  stage:    new THREE.Group(),
+  floors:   new THREE.Group(),
+  roof:     new THREE.Group(),
+  openings: new THREE.Group(),
+  stairs:   new THREE.Group(),
+  trees:    new THREE.Group(),
+  beams:    new THREE.Group(),
+  columns:  new THREE.Group(),
+  furniture:new THREE.Group(),
+  clouds:   new THREE.Group(),
+};
+Object.values(GRP).forEach(g=>S.add(g));
+
+// ─── BOX HELPER ─────────────────────────────────────────────────────────────
+function box(w,h,d,mat,x,y,z,grp,rx=0,ry=0,rz=0){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+  m.position.set(x,y,z);
+  m.rotation.set(rx,ry,rz);
+  m.castShadow=true; m.receiveShadow=true;
+  grp.add(m); return m;
+}
+
+// ─── BUILDING DIMENSIONS ─────────────────────────────────────────────────────
+const BW = 76;    // building total width (X)
+const BD = 28;    // building depth (Z) — 2 bays
+const GFH= 10;    // ground floor height
+const FFH= 10;    // first floor height
+const WT = 0.75;  // wall thickness (9")
+const BAY= 12.75; // bay width
+const NUM_BAYS = 6;
+const COL_W = 0.75;
+const COL_H = GFH;
+
+// Staircase constants (moved up to fix initialization error)
+const SW=4.5, IRISE=0.55, IRUN=0.9, ISTEPS=18;
+
+// Column X positions (7 cols, no middle col = keep outer + every other)
+// From photo: columns at edges, skip center on front face
+const colXs = [];
+for(let i=0;i<=NUM_BAYS;i++) colXs.push(-BW/2 + i*BAY);
+
+// Y levels
+const GF_TOP = GFH;
+const FF_TOP = GFH + FFH;
+
+// ─── SKY & CLOUDS ────────────────────────────────────────────────────────────
+// Gradient sky replacement
+(function(){
+  const topColor = new THREE.Color(0x87ceeb);
+  const bottomColor = new THREE.Color(0xddeeff);
+  const skyG = new THREE.SphereGeometry(300, 32, 15);
+  const skyM = new THREE.ShaderMaterial({
+    uniforms: {
+      topColor: { value: topColor },
+      bottomColor: { value: bottomColor },
+      offset: { value: 33 },
+      exponent: { value: 0.6 }
+    },
+    vertexShader: `
+      varying vec3 vWorldPosition;
+      void main() {
+        vec4 worldPosition = modelMatrix * vec4( position, 1.0 );
+        vWorldPosition = worldPosition.xyz;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+      }`,
+    fragmentShader: `
+      uniform vec3 topColor;
+      uniform vec3 bottomColor;
+      uniform float offset;
+      uniform float exponent;
+      varying vec3 vWorldPosition;
+      void main() {
+        float h = normalize( vWorldPosition + offset ).y;
+        gl_FragColor = vec4( mix( bottomColor, topColor, max( pow( max( h, 0.0 ), exponent ), 0.0 ) ), 1.0 );
+      }`,
+    side: THREE.BackSide
+  });
+  const sky = new THREE.Mesh(skyG, skyM);
+  S.add(sky);
+})();
+
+function addCloud(x,y,z){
+  const cg=new THREE.Group();
+  const clat=M(0xffffff,{transparent:true,opacity:0.8});
+  for(let i=0;i<5;i++){
+    const p=new THREE.Mesh(new THREE.SphereGeometry(4+Math.random()*4,8,8),clat);
+    p.position.set(i*5-10,Math.random()*2,Math.random()*3);
+    p.scale.y=0.6; cg.add(p);
+  }
+  cg.position.set(x,y,z); GRP.clouds.add(cg);
+}
+for(let i=0;i<12;i++) addCloud((Math.random()-0.5)*300, 60+Math.random()*30, (Math.random()-0.5)*300);
+
+// ─── GROUND ──────────────────────────────────────────────────────────────────
+// Ground (Sand/Earth)
+box(600,0.5,600, M(0xd4c4a8), 0,-0.25,20, GRP.floors);
+
+// Lush Grass Lawn Area
+box(500,0.1,500, MAT.lawn, 0,0.05,20, GRP.floors);
+
+// Paved courtyard (Entrance Area)
+box(140,0.15,90, MAT.courtyard, 0,0.1,45, GRP.floors);
+
+// Building foundation (Raised Plinth)
+box(BW+2, 1.4, 34, MAT.plinth, 0,0.71,2, GRP.floors);
+
+// Building interior floor (lifted)
+box(BW-1.5, 0.12, 32, MAT.innerFloor, 0,1.45,2, GRP.floors);
+
+// ─── PERIMETER WALLS — GROUND FLOOR ──────────────────────────────────────────
+// Front wall with openings (from photo: brick wall ~4ft tall with columns above)
+// Wall sections between columns (front face z = BD/2)
+const FZ = BD/2 + 4;   // pushed back — front wall now further from camera
+const BZ = -BD/2;
+
+// --- Front wall detail (Signboard / Entrance side) ---
+// Detailed plinth for doors
+box(-BW/2 - (-7.5), 1.2, WT, MAT.plinth, (-BW/2 - 7.5)/2, 0.6, FZ, GRP.walls);
+box(7, 1.2, WT, MAT.plinth, 0, 0.6, FZ, GRP.walls);
+box(BW/2 - 7.5, 1.2, WT, MAT.plinth, (BW/2 + 7.5)/2, 0.6, FZ, GRP.walls);
+
+// Front wall segments with gaps for doors at -5.5 and 5.5
+// Left part (outer edge to door 1)
+box(-BW/2 - (-7.5), GFH-1.2, WT, MAT.brick, (-BW/2 - 7.5)/2, 1.2 + (GFH-1.2)/2, FZ, GRP.walls);
+// Middle part (between door 1 and door 2)
+box(3.5*2, GFH-1.2, WT, MAT.brick, 0, 1.2 + (GFH-1.2)/2, FZ, GRP.walls);
+// Right part (door 2 to outer edge)
+box(BW/2 - 7.5, GFH-1.2, WT, MAT.brick, (BW/2 + 7.5)/2, 1.2 + (GFH-1.2)/2, FZ, GRP.walls);
+
+// Lintel above doors (center area)
+box(18, 0.8, WT+0.1, MAT.concrete, 0, 7.5, FZ, GRP.walls);
+
+// Rear wall (solid)
+box(BW, GFH, WT, MAT.brick, 0, GFH/2, BZ, GRP.walls);
+
+// Left wall
+box(WT, GFH, BD, MAT.brick, -BW/2, GFH/2, 0, GRP.walls);
+
+// Right wall (stair side - partial)
+box(WT, GFH, BD*0.6, MAT.brick, BW/2, GFH/2, -BD*0.2, GRP.walls);
+box(WT, GFH*0.6, BD*0.4, MAT.brick, BW/2, GFH*0.3, BD*0.3, GRP.walls);
+
+// Columns (front face, brick pilasters like photo)
+colXs.forEach((cx,i)=>{
+  if(i===0||i===NUM_BAYS) {
+    // Corner columns — full height + rebar sticking up
+    box(COL_W+0.3, GFH+1.5, COL_W+0.3, MAT.column, cx, (GFH+1.5)/2, FZ, GRP.columns);
+    box(COL_W+0.3, GFH+1.5, COL_W+0.3, MAT.column, cx, (GFH+1.5)/2, BZ, GRP.columns);
+    // Rebar sticking up (like photo)
+    for(let r=0;r<4;r++){
+      box(0.06,2.5,0.06, MAT.rebar, cx-0.2+r*0.13, GFH+1.5+1.25, FZ, GRP.columns);
+    }
+  } else {
+    // Interior pilasters on front
+    box(COL_W+0.15, GFH+0.6, COL_W+0.15, MAT.column, cx, (GFH+0.6)/2, FZ, GRP.columns);
+    // Rebar on top of intermediate columns
+    for(let r=0;r<3;r++){
+      box(0.06,1.8,0.06, MAT.rebar, cx-0.15+r*0.13, GFH+0.6+0.9, FZ, GRP.columns);
+    }
+  }
+  // Interior structural columns (Clearing center)
+  if(i===0||i===NUM_BAYS){
+    box(COL_W, GFH, COL_W, MAT.concrete, cx, GFH/2, 0, GRP.beams);
+    box(COL_W, GFH, COL_W, MAT.concrete, cx, GFH/2, BZ, GRP.beams);
+  }
+});
+
+// Interior columns Y-direction (Only keeping perimeter)
+[-BD/2, BD/2].forEach(cz=>{
+  [colXs[0],colXs[NUM_BAYS]].forEach(cx=>{
+    box(COL_W,FFH,COL_W, MAT.concrete, cx, GFH+FFH/2, cz, GRP.beams);
+  });
+});
+
+// ─── BEAMS ───────────────────────────────────────────────────────────────────
+// GF beams along X
+[-BD/2,0,BD/2].forEach(cz=>{
+  for(let i=0;i<NUM_BAYS;i++){
+    box(BAY,1.25,WT, MAT.beam, colXs[i]+BAY/2, GFH-0.625, cz, GRP.beams);
+  }
+});
+// GF beams along Z
+colXs.forEach(cx=>{
+  box(WT,1.25,BD, MAT.beam, cx, GFH-0.625, 0, GRP.beams);
+});
+// FF beams
+[-BD/2,0,BD/2].forEach(cz=>{
+  for(let i=0;i<NUM_BAYS;i++){
+    box(BAY,1.5,WT, MAT.beam, colXs[i]+BAY/2, GFH+FFH-0.75, cz, GRP.beams);
+  }
+});
+[colXs[0],colXs[2],colXs[4],colXs[6]].forEach(cx=>{
+  box(WT,1.5,BD, MAT.beam, cx, GFH+FFH-0.75, 0, GRP.beams);
+});
+
+// FF walls (Restored)
+box(BW, FFH-1, WT, MAT.brick, 0, GFH+(FFH-1)/2, FZ, GRP.walls);
+box(BW, FFH-1, WT, MAT.brick, 0, GFH+(FFH-1)/2, BZ, GRP.walls);
+box(WT, FFH-1, 32, MAT.brick, -BW/2, GFH+(FFH-1)/2, 2, GRP.walls);
+box(WT, FFH-1, 32, MAT.brick,  BW/2, GFH+(FFH-1)/2, 2, GRP.walls);
+
+// Rainwater Pipes (PVC) — Moved to outer corners for cleanliness
+[-BW/2, BW/2].forEach(px=>{
+  const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,GFH+FFH,8), MAT.pvc);
+  pipe.position.set(px, (GFH+FFH)/2, FZ+0.5);
+  GRP.walls.add(pipe);
+  // Brackets
+  for(let j=0;j<5;j++) box(0.3,0.1,0.5, MAT.pvc, px, j*4+2, FZ+0.3, GRP.walls);
+});
+
+// AC Units — Moved to side walls to prevent logo blocking
+for(let i=0;i<2;i++){
+  const wz = -BD/4 + i*BD/2;
+  const acBox = new THREE.Mesh(new THREE.BoxGeometry(1.8,1.4,1.2), MAT.acUnit);
+  acBox.position.set(-BW/2-0.5, GFH+FFH-4, wz);
+  acBox.rotation.y = Math.PI/2;
+  GRP.walls.add(acBox);
+}
+
+// Wall top coping
+box(BW+WT*2, 0.5, WT+0.3, MAT.wallTop, 0, GFH+FFH, FZ, GRP.walls);
+box(BW+WT*2, 0.5, WT+0.3, MAT.wallTop, 0, GFH+FFH, BZ, GRP.walls);
+box(WT+0.3, 0.5, 32+WT*2, MAT.wallTop, -BW/2, GFH+FFH, 2, GRP.walls);
+box(WT+0.3, 0.5, 32+WT*2, MAT.wallTop,  BW/2, GFH+FFH, 2, GRP.walls);
+
+// FF Slab with opening for stairs
+(function(){
+  const slabW = BW-WT;
+  const slabD = BD-WT;
+  const holeW = SW + 1.2;
+  const holeD = BD * 0.7;
+  const holeX = BW/2 - holeW/2 - 0.5;
+  const holeZ = -BD/2 + holeD/2 - 0.5;
+
+  // Instead of one big box, we build it from 4 pieces to create a hole
+  // Piece 1: Left of hole
+  box(slabW - holeW, 0.2, slabD, MAT.roofInner, -holeW/2, GFH-0.1, 0, GRP.roof);
+  // Piece 2: Front of hole
+  box(holeW, 0.2, slabD - holeD, MAT.roofInner, holeX, GFH-0.1, (slabD-holeD)/2 + holeZ + holeD/2, GRP.roof);
+  // Piece 3: Back of hole (if any)
+  // Piece 4: Right of hole (none because hole is at the edge)
+
+  // Top roof similarly (optional, maybe just the FF slab needs it)
+  box(slabW - holeW, 0.2, slabD, MAT.roofInner, -holeW/2, FF_TOP-0.1, 0, GRP.roof);
+  box(holeW, 0.2, slabD - holeD, MAT.roofInner, holeX, FF_TOP-0.1, (slabD-holeD)/2 + holeZ + holeD/2, GRP.roof);
+
+  // External roof (the blue translucent one)
+  box(BW+WT, 0.42, BD+WT, MAT.roof, 0, FF_TOP+0.21, 0, GRP.roof);
+})();
+
+// Water tank on roof (visible in photo)
+box(5,3,4, MAT.concrete, -BW/2+8, FF_TOP+2, BZ+4, GRP.roof);
+
+// ─── STAGE (LEFT SIDE, GROUND FLOOR) ─────────────────────────────────────────
+const STAGE_W = 18;
+const STAGE_D = BD - 2;
+const STAGE_H = 1.2;
+const STAGE_X = -BW/2 + STAGE_W/2 + 0.5;
+
+// Stage platform (lifted to plinth level)
+box(STAGE_W, STAGE_H, STAGE_D, MAT.stage, STAGE_X, 1.4+STAGE_H/2, 2, GRP.stage);
+// Stage top
+box(STAGE_W, 0.12, STAGE_D, MAT.stageTop, STAGE_X, 1.4+STAGE_H+0.06, 2, GRP.stage);
+// Stage front fascia
+box(STAGE_W, STAGE_H, 0.3, MAT.concrete, STAGE_X, 1.4+STAGE_H/2, 2+STAGE_D/2+0.15, GRP.stage);
+// Stage steps (3 steps from front)
+for(let s=0;s<3;s++){
+  box(3.5, (s+1)*0.4, 0.6, MAT.stairMat,
+    STAGE_X, 1.4+(s+1)*0.4/2, 2+STAGE_D/2+0.3+(s*0.7), GRP.stage);
+}
+// Podium on stage
+box(1.2,1.1,0.7, MAT.door, STAGE_X, 1.4+STAGE_H+1.1/2+0.06, 2-1, GRP.stage);
+// Stage back wall text
+(function(){
+  const c=document.createElement('canvas'); c.width=1024; c.height=128;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle='white'; ctx.font='bold 40px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('PM SHRI PRATHMIK VIDHYAMANDIR PONSRI HALL', 512, 50);
+  ctx.font='30px sans-serif';
+  ctx.fillText('THREE OUR ICON', 512, 100);
+  const tex=new THREE.CanvasTexture(c);
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(16,2), new THREE.MeshBasicMaterial({map:tex,transparent:true}));
+  m.position.set(-BW/2+0.85, 1.4 + GFH*0.7, 2);
+  m.rotation.y = Math.PI/2;
+  GRP.stage.add(m);
+})();
+
+// ─── WINDOWS ─────────────────────────────────────────────────────────────────
+function addWindow(x,y,z,ry,grp){
+  // Frame
+  const fw=2.8, fh=2.2, fd=0.15;
+  box(fw+0.2, fh+0.2, fd, MAT.winFrame, x,y,z, grp, 0,ry,0);
+  // Glass panes (2 panes)
+  box(fw*0.46, fh*0.9, 0.08, MAT.window, x-fw*0.25,y,z+0.05, grp, 0,ry,0);
+  box(fw*0.46, fh*0.9, 0.08, MAT.window, x+fw*0.25,y,z+0.05, grp, 0,ry,0);
+  // Cross bars
+  box(fw, 0.1, 0.1, MAT.winFrame, x,y,z+0.1, grp, 0,ry,0);
+  box(0.1, fh, 0.1, MAT.winFrame, x,y,z+0.1, grp, 0,ry,0);
+}
+
+// Front face windows (GF - between columns, in wall segments)
+[-BW/2+BAY*1.5, -BW/2+BAY*2.3, BW/2-BAY*1.5, BW/2-BAY*0.9].forEach(wx=>{
+  addWindow(wx, 4.5, FZ+0.05, 0, GRP.openings);
+});
+
+// FF front windows
+for(let i=0;i<5;i++){
+  addWindow(-BW/2+BAY*(i+0.8), GFH+4, FZ+0.05, 0, GRP.openings);
+}
+
+// Side wall windows (left - GF)
+[-BD/4, BD/4].forEach(wz=>{
+  addWindow(-BW/2+0.1, 4.5, wz, Math.PI/2, GRP.openings);
+  addWindow( BW/2-0.1, 4.5, wz, Math.PI/2, GRP.openings);
+});
+// FF side windows
+[-BD/3, 0, BD/3].forEach(wz=>{
+  addWindow(-BW/2+0.1, GFH+4, wz, Math.PI/2, GRP.openings);
+  addWindow( BW/2-0.1, GFH+4, wz, Math.PI/2, GRP.openings);
+});
+// Rear windows
+[-BW/4, 0, BW/4].forEach(wx=>{
+  addWindow(wx, 4.5, BZ-0.05, 0, GRP.openings);
+  addWindow(wx, GFH+4, BZ-0.05, 0, GRP.openings);
+});
+
+// ─── DOORS ───────────────────────────────────────────────────────────────────
+function addDoor(x,y,z,ry,grp){
+  const dw=3, dh=5.5, dd=0.18;
+  // Frame
+  box(dw+0.3, dh+0.25, dd, MAT.doorFrame, x,y+dh/2,z, grp, 0,ry,0);
+  // Two door panels
+  box(dw*0.46, dh*0.95, 0.1, MAT.door, x-dw*0.25,y+dh/2,z+0.06, grp, 0,ry,0);
+  box(dw*0.46, dh*0.95, 0.1, MAT.door, x+dw*0.25,y+dh/2,z+0.06, grp, 0,ry,0);
+  // Arch above door — wrap in Group to avoid read-only property error on r128
+  const archG=new THREE.TorusGeometry(dw/2,0.18,8,16,Math.PI);
+  const archMesh=new THREE.Mesh(archG,MAT.doorFrame);
+  archMesh.castShadow=true;
+  const archGrp=new THREE.Group();
+  archGrp.add(archMesh);
+  archGrp.rotation.y=ry;
+  archGrp.position.set(x, y+dh+0.18/2, z);
+  grp.add(archGrp);
+}
+
+// Doors restored to front wall (FZ)
+addDoor(-5.5, 0, FZ, 0, GRP.openings);
+addDoor( 5.5, 0, FZ, 0, GRP.openings);
+// Stage door (left side interior)
+addDoor(-BW/2+WT, 0, BD/4, Math.PI/2, GRP.openings);
+// Rear door
+addDoor(0, 0, BZ+WT/2, 0, GRP.openings);
+
+// ─── EXTERNAL STAIRS (proper steps, no ramp) ─────────────────────────────────
+const EXT_STEPS=8, EXT_SW=7, EXT_SH=0.22, EXT_SD=0.85, EXT_BASE_Z=FZ+0.4;
+[-8,8].forEach(stairX=>{
+  for(let s=0;s<EXT_STEPS;s++){
+    box(EXT_SW,EXT_SH*(s+1),EXT_SD,MAT.stairMat,
+      stairX,EXT_SH*(s+1)/2,
+      EXT_BASE_Z+(EXT_STEPS-1-s)*EXT_SD+EXT_SD/2,GRP.stairs);
+  }
+  box(0.3,EXT_SH*EXT_STEPS+0.3,EXT_SD*EXT_STEPS+0.5,MAT.concrete,
+    stairX-EXT_SW/2-0.15,(EXT_SH*EXT_STEPS)/2,EXT_BASE_Z+EXT_SD*EXT_STEPS/2,GRP.stairs);
+  box(0.3,EXT_SH*EXT_STEPS+0.3,EXT_SD*EXT_STEPS+0.5,MAT.concrete,
+    stairX+EXT_SW/2+0.15,(EXT_SH*EXT_STEPS)/2,EXT_BASE_Z+EXT_SD*EXT_STEPS/2,GRP.stairs);
+});
+// Interior staircase proper steps
+for(let s=0;s<ISTEPS;s++){
+  box(SW,IRISE*(s+1),IRUN,MAT.stairMat,
+    BW/2-SW/2-0.8,IRISE*(s+1)/2,
+    -BD/2+(ISTEPS-1-s)*IRUN+IRUN/2,GRP.stairs);
+}
+box(SW,0.3,BD*0.25,MAT.stairMat,BW/2-SW/2-0.8,GFH-0.15,BD/8,GRP.stairs);
+// ─── OLD RAMP REMOVED ────────────────────────────────────────────────────────
+const RAMP_L = 9, RAMP_W = 4, RAMP_H = 1.5;
+// (ramp removed — replaced with proper stairs above)
+
+// ─── BRICK PILES (from photo) ────────────────────────────────────────────────
+function brickPile(x,z,grp){
+  for(let r=0;r<4;r++){
+    for(let c=0;c<8;c++){
+      box(0.5,0.12,0.24, MAT.brick,
+        x+c*0.52-(r%2)*0.26, r*0.13+0.06, z+r*0.01, grp);
+    }
+  }
+}
+brickPile(10, FZ+8, GRP.floors);
+brickPile(-18, FZ+6, GRP.floors);
+
+// Sand/dirt pile
+box(4,0.6,3, MAT.sand, -12, 0.3, FZ+7, GRP.floors);
+
+// ─── TREES (like photo — multiple medium trees) ───────────────────────────────
+function tree(x,z,h,r,grp){
+  // Trunk
+  const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.25,0.4,h*0.45,8),MAT.treeTrunk);
+  trunk.position.set(x,h*0.45/2,z);
+  trunk.castShadow=true; grp.add(trunk);
+  // Multi-layer crown
+  [[0,h*0.5,r],[0.5,h*0.62,r*0.8],[-0.3,h*0.7,r*0.65],[0.2,h*0.8,r*0.45]].forEach(([ox,cy,cr])=>{
+    const crown=new THREE.Mesh(new THREE.SphereGeometry(cr,8,6),MAT.treeCrown);
+    crown.position.set(x+ox,cy,z+(Math.random()-0.5)*0.5);
+    crown.scale.y=1.15;
+    crown.castShadow=true; grp.add(crown);
+  });
+}
+
+// Trees matching photo (behind/beside the building wall)
+tree(-BW/2-4, -BD/2-4, 9, 3.2, GRP.trees);
+tree(-BW/2-4,  BD/2+4, 8, 2.8, GRP.trees);
+tree(0, -BD/2-5, 11, 3.8, GRP.trees);
+tree(BW/4, -BD/2-4, 9, 3.0, GRP.trees);
+tree(BW/2+4, -BD/2-3, 8, 2.6, GRP.trees);
+tree(-BW/4, -BD/2-6, 10, 3.2, GRP.trees);
+tree(BW/2+5, BD/4, 7, 2.4, GRP.trees);
+// Background trees (more variety)
+for(let i=0;i<10;i++){
+  tree(-BW/2+i*18-10, -BD/2-15-Math.random()*10, 10+Math.random()*6, 2.5+Math.random()*2, GRP.trees);
+}
+// ─── FURNITURE ──────────────────────────────────────────────────────────────
+function addBench(x,z,ry){
+  const bg=new THREE.Group();
+  // legs
+  box(0.1,0.6,0.1, MAT.rebar, -1.2,0.3,0, bg); box(0.1,0.6,0.1, MAT.rebar, 1.2,0.3,0, bg);
+  box(0.1,0.6,0.1, MAT.rebar, -1.2,0.3,0.6, bg); box(0.1,0.6,0.1, MAT.rebar, 1.2,0.3,0.6, bg);
+  // seat
+  box(2.6,0.1,0.8, MAT.door, 0,0.6,0.3, bg);
+  // backrest
+  box(2.6,0.5,0.08, MAT.door, 0,0.9,0.7, bg);
+  // Position bench on top of plinth floor
+  bg.position.set(x,1.46,z); bg.rotation.y=ry;
+  GRP.furniture.add(bg);
+}
+for(let i=0;i<4;i++){
+  for(let j=0;j<4;j++){
+    addBench(-20+j*6, -8+i*6, Math.PI/2);
+    addBench( 20-j*6, -8+i*6, Math.PI/2);
+  }
+}
+
+// ─── BOUNDARY WALL (Moved to backside) ──────────────────────────────────────
+const CWH=2.2; 
+// Boundary at back
+box(180, CWH, WT, MAT.brick, 0, CWH/2, BZ-25, GRP.walls);
+// Boundary wall pillars
+for(let i=-9;i<=9;i++){
+  box(0.9, CWH+0.4, 0.9, MAT.column, i*10, (CWH+0.4)/2, BZ-25, GRP.columns);
+}
+// Side boundaries
+box(WT, CWH, 120, MAT.brick, -90, CWH/2, BZ+35, GRP.walls);
+box(WT, CWH, 120, MAT.brick,  90, CWH/2, BZ+35, GRP.walls);
+
+// ─── ELECTRIC POLE (from photo) ──────────────────────────────────────────────
+const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.18,15,6), M(0x444455));
+pole.position.set(-BW/2-18, 7.5, FZ+10);
+pole.castShadow=true;
+S.add(pole);
+// Wire
+const wirePts = [
+  new THREE.Vector3(-BW/2-18, 14.5, FZ+10),
+  new THREE.Vector3(-BW/2+5, 12, FZ+0.5),
+];
+const wireLine = new THREE.Line(
+  new THREE.BufferGeometry().setFromPoints(wirePts),
+  new THREE.LineBasicMaterial({color:0x333344})
+);
+S.add(wireLine);
+
+// ─── NEIGHBOR BUILDING (background, like photo) ──────────────────────────────
+box(18,16,14, MT(TEX.brick,0xccbbaa,[3,3]), BW/2+16, 8, -BD/2-8, GRP.columns);
+box(18,5,5,   MAT.concrete, BW/2+20, 18, -BD/2-5, GRP.columns);
+box(0.5,18,14,MAT.brick, BW/2+7.3,9,-BD/2-8, GRP.columns);
+
+// ─── ORBIT CONTROLS ──────────────────────────────────────────────────────────
+let sph={theta:0.5, phi:0.78, r:100};
+let tgt=new THREE.Vector3(0,8,0);
+let drag=false, rDrag=false, pm={x:0,y:0};
+
+function updCam(){
+  CAM.position.x=tgt.x+sph.r*Math.sin(sph.phi)*Math.sin(sph.theta);
+  CAM.position.y=tgt.y+sph.r*Math.cos(sph.phi);
+  CAM.position.z=tgt.z+sph.r*Math.sin(sph.phi)*Math.cos(sph.theta);
+  CAM.lookAt(tgt);
+}
+updCam();
+
+canvas.addEventListener('mousedown',e=>{drag=true;rDrag=e.button===2;pm={x:e.clientX,y:e.clientY};});
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+window.addEventListener('mouseup',()=>drag=false);
+window.addEventListener('mousemove',e=>{
+  if(!drag)return;
+  const dx=e.clientX-pm.x, dy=e.clientY-pm.y;
+  pm={x:e.clientX,y:e.clientY};
+  if(rDrag){
+    const right=new THREE.Vector3().crossVectors(
+      new THREE.Vector3(0,1,0),
+      new THREE.Vector3().subVectors(CAM.position,tgt).normalize()
+    ).normalize();
+    tgt.addScaledVector(right,dx*0.06);
+    tgt.y-=dy*0.06;
+  } else {
+    sph.theta-=dx*0.007;
+    sph.phi=Math.max(0.12,Math.min(1.45,sph.phi+dy*0.007));
+  }
+  updCam();
+});
+canvas.addEventListener('wheel',e=>{
+  sph.r=Math.max(8,Math.min(180,sph.r+e.deltaY*0.06));
+  updCam();
+},{passive:true});
+
+// touch
+let lt=null;
+canvas.addEventListener('touchstart',e=>{lt=e.touches[0];drag=true;rDrag=false;},{passive:true});
+canvas.addEventListener('touchmove',e=>{
+  if(!lt)return;
+  const t=e.touches[0];
+  sph.theta-=(t.clientX-lt.clientX)*0.01;
+  sph.phi=Math.max(0.12,Math.min(1.45,sph.phi+(t.clientY-lt.clientY)*0.01));
+  lt=t; updCam(); e.preventDefault();
+},{passive:false});
+canvas.addEventListener('touchend',()=>{drag=false;lt=null;});
+
+// ─── VIEW PRESETS ─────────────────────────────────────────────────────────────
+function sv(v){
+  if(v==='front')       {sph={theta:0,phi:1.05,r:110}; tgt.set(0,6,0);}
+  if(v==='back')        {sph={theta:Math.PI,phi:1.05,r:110}; tgt.set(0,6,0);}
+  if(v==='top')         {sph={theta:0,phi:0.15,r:160};tgt.set(0,5,0);}
+  if(v==='inside-hall') {sph={theta:Math.PI*0.5,phi:1.4,r:25};tgt.set(0,3,0);}
+  if(v==='second-floor'){sph={theta:Math.PI*0.5,phi:1.3,r:25};tgt.set(0,GFH+4,0);}
+  if(v==='stage-view')  {sph={theta:-Math.PI*0.5,phi:1.2,r:22};tgt.set(-BW/2+12,5,0);}
+  if(v==='up-view')     {sph={theta:0,phi:2.2,r:80};tgt.set(0,0,0);}
+  if(v==='side')        {sph={theta:Math.PI/2,phi:0.95,r:110};tgt.set(0,8,0);}
+  if(v==='iso')         {sph={theta:0.8,phi:0.8,r:130};tgt.set(0,8,0);}
+  updCam();
+}
+function setTime(m){
+  const conf={
+    morning:  {sky:0x87CEEB, sun:0xfff5e0, sunInt:1.2, fog:0xc8dff0},
+    noon:     {sky:0x4488ff, sun:0xffffff, sunInt:1.5, fog:0xddeeff},
+    evening:  {sky:0xff8844, sun:0xff4422, sunInt:0.8, fog:0xffaa88},
+    night:    {sky:0x050515, sun:0x444466, sunInt:0.1, fog:0x0a0a1a},
+  };
+  const c=conf[m];
+  R.setClearColor(c.sky);
+  skyBox.material.color.set(c.sky);
+  sun.color.set(c.sun); sun.intensity=c.sunInt;
+  S.fog.color.set(c.fog);
+  fillLight.intensity = (m==='night'?0.05:0.4);
+}
+function rv(){sph={theta:0.5,phi:0.78,r:100};tgt.set(0,8,0);updCam();}
+
+// ─── LAYER TOGGLE ─────────────────────────────────────────────────────────────
+const ls={};
+Object.keys(GRP).forEach(k=>ls[k]=true);
+function tog(k){
+  ls[k]=!ls[k];
+  GRP[k].visible=ls[k];
+  document.getElementById('b-'+k).classList.toggle('on',ls[k]);
+}
+
+// ─── WIREFRAME ────────────────────────────────────────────────────────────────
+let wf=false;
+const allMats=[MAT.brick,MAT.brickCol,MAT.concrete,MAT.floor,MAT.ground,MAT.paver,
+  MAT.roof,MAT.roofInner,MAT.beam,MAT.stage,MAT.stageTop,MAT.glass,MAT.doorFrame,
+  MAT.door,MAT.column,MAT.sand,MAT.rebar,MAT.treeTrunk,MAT.treeCrown,MAT.stairMat,
+  MAT.rampMat,MAT.window,MAT.winFrame,MAT.wallTop,MAT.plinth,MAT.innerFloor];
+function twf(){wf=!wf;allMats.forEach(m=>m.wireframe=wf);}
+
+// ─── RESIZE ──────────────────────────────────────────────────────────────────
+window.addEventListener('resize',()=>{
+  CAM.aspect=innerWidth/innerHeight;
+  CAM.updateProjectionMatrix();
+  R.setSize(innerWidth,innerHeight);
+});
+
+// ─── SCHOOL NAME SIGNBOARD ────────────────────────────────────────────────────
+(function(){
+  const c=document.createElement('canvas'); c.width=1024; c.height=160;
+  const ctx=c.getContext('2d');
+  // board background — deep blue
+  ctx.fillStyle='#0a1a5c'; ctx.roundRect(0,0,1024,160,16); ctx.fill();
+  // gold border
+  ctx.strokeStyle='#d4aa40'; ctx.lineWidth=6;
+  ctx.roundRect(5,5,1014,150,12); ctx.stroke();
+  // inner white line
+  ctx.strokeStyle='rgba(255,255,255,0.3)'; ctx.lineWidth=2;
+  ctx.roundRect(14,14,996,132,8); ctx.stroke();
+  // Text
+  ctx.fillStyle='#ffd700';
+  ctx.font='bold 44px serif';
+  ctx.textAlign='center';
+  ctx.fillText('PM SHRI PRATHMIK VIDHYAMANDIR', 512, 72);
+  ctx.fillStyle='#ffffff';
+  ctx.font='bold 34px serif';
+  ctx.fillText('PONSRI', 512, 130);
+  const tex=new THREE.CanvasTexture(c);
+  const signMat=new THREE.MeshBasicMaterial({map:tex,transparent:true,side:THREE.DoubleSide});
+  const sign=new THREE.Mesh(new THREE.PlaneGeometry(32,5),signMat);
+  sign.position.set(0, GFH+FFH-3.5, FZ+0.6); 
+  S.add(sign);
+})();
+
+// ─── PM SHRI LOGO (PNG FILE) - ENHANCED VISIBILITY ──────────────────────────────
+(function(){
+  const loader = new THREE.TextureLoader();
+  loader.load('LOGO.png', function(tex){
+    const logoMat=new THREE.MeshBasicMaterial({map:tex,transparent:true,side:THREE.DoubleSide});
+    // Icons on front sign
+    const logo=new THREE.Mesh(new THREE.PlaneGeometry(4.5,4.5),logoMat);
+    logo.position.set(-18.5, GFH+FFH-3.5, FZ+0.62);
+    S.add(logo);
+    const logo2=logo.clone();
+    logo2.position.set(18.5, GFH+FFH-3.5, FZ+0.62);
+    S.add(logo2);
+
+    // Three Icons on Stage Wall
+    const sLogo1 = logo.clone();
+    sLogo1.rotation.y = Math.PI/2;
+    sLogo1.position.set(-BW/2+0.86, 1.4 + GFH*0.7 - 2, 2-4);
+    sLogo1.scale.set(0.5,0.5,0.5);
+    GRP.stage.add(sLogo1);
+
+    const sLogo2 = sLogo1.clone();
+    sLogo2.position.set(-BW/2+0.86, 1.4 + GFH*0.7 - 2, 2+0);
+    GRP.stage.add(sLogo2);
+
+    const sLogo3 = sLogo1.clone();
+    sLogo3.position.set(-BW/2+0.86, 1.4 + GFH*0.7 - 2, 2+4);
+    GRP.stage.add(sLogo3);
+  });
+})();
+
+// ─── INNER HALL VIEW PRESET ───────────────────────────────────────────────────
+// 'inside' view already defined in sv() — camera looks from inside hall
+
+let fc=0;
+function animate(){
+  requestAnimationFrame(animate);
+  R.render(S,CAM);
+  if(fc++===80){
+    const el=document.getElementById('loading');
+    el.style.opacity='0';
+    setTimeout(()=>el.style.display='none',600);
+  }
+}
+animate();
+</script>
+</body>
+</html>
